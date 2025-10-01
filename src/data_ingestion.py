@@ -13,6 +13,16 @@ DATETIME_COL = "datetime"
 ID_VARS = ["epoch", DATETIME_COL, "year", "month", "day"]
 
 def _read_data_file(base_path: Path) -> pl.DataFrame:
+    """
+    Helper function to read a data file. It prioritizes the Parquet format.
+    It will try to read a .parquet file first, and falls back to .csv if not found.
+
+    Args:
+        base_path (Path): The path to the file without its extension.
+
+    Returns:
+        pl.DataFrame: The loaded data as a Polars DataFrame.
+    """
     parquet_path = base_path.with_suffix('.parquet')
     csv_path = base_path.with_suffix('.csv')
     if parquet_path.exists():
@@ -28,6 +38,16 @@ def _read_data_file(base_path: Path) -> pl.DataFrame:
         sys.exit(1)
 
 def load_and_process_data(data_dir: Path, config: dict) -> dict[str, pl.DataFrame]:
+    """
+    Loads all local data files, merges them, and transforms them into a tidy format.
+
+    Args:
+        data_dir (Path): The path to the directory containing the raw data files.
+        config (dict): The loaded project configuration.
+
+    Returns:
+        dict[str, pl.DataFrame]: A dictionary of three tidy DataFrames: 'iaq', 'vav', and 'ahu'.
+    """
     logger.info(f"Searching for data files in: {data_dir.resolve()}")
     file_map = config.get("data_files")
     if not file_map:
@@ -63,6 +83,16 @@ def load_and_process_data(data_dir: Path, config: dict) -> dict[str, pl.DataFram
     }
 
 def fetch_psi_data(date: datetime | None = None) -> pl.DataFrame:
+    """
+    Fetches PSI data from the data.gov.sg API for a specific date.
+    If no date is provided, it fetches the latest available data.
+
+    Args:
+        date (datetime | None): The date for which to fetch PSI data. Defaults to None.
+
+    Returns:
+        pl.DataFrame: A DataFrame containing the parsed PSI data, or an empty DataFrame on failure.
+    """
     config = load_config()
     api_config = config.get("api_urls", {})
     psi_url = api_config.get("psi")

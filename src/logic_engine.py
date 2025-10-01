@@ -9,6 +9,12 @@ logger = logging.getLogger(__name__)
 
 class IAQLogicEngine:
     def __init__(self, config: dict):
+        """
+        Initializes the logic engine, loads, and validates the configuration.
+
+        Args:
+            config (dict): The loaded configuration from config.yaml.
+        """
         self.config = config
         self._validate_config()
         self.outdoor_co2 = self.config["parameters"]["outdoor_co2_ppm"]
@@ -22,6 +28,10 @@ class IAQLogicEngine:
         logger.info("IAQ Logic Engine Initialized.")
 
     def _validate_config(self):
+        """
+        Performs a strict check on the loaded configuration to ensure all required
+        keys and sections are present. Fails fast on startup if the config is invalid.
+        """
         required_sections = [
             "data_files", "api_urls", "parameters", "defaults", 
             "thresholds", "sensor_to_vav_map", "actions"
@@ -63,6 +73,10 @@ class IAQLogicEngine:
         logger.info("All required configuration sections and keys are present.")
 
     def _log_action(self, ts, sensor_id, event, details, reasons="", cycle=0):
+        """
+        A helper method to log an event to the console and simultaneously store it 
+        as a structured record for the final CSV report.
+        """
         log_message = f"[{ts}] Sensor {sensor_id}: {event}. Details: {details}"
         if event.endswith("Failed"):
             logger.warning(log_message)
@@ -78,6 +92,17 @@ class IAQLogicEngine:
         })
 
     def _check_bms_filter_alarms(self, ts: timedelta, ahu_data_for_ts: pl.DataFrame) -> bool:
+        """
+        Checks for active BMS filter alarms using filter status flags from the AHU data.
+        This corresponds to the top-right logic block in the flowchart.
+
+        Args:
+            ts (timedelta): The current timestamp of the simulation.
+            ahu_data_for_ts (pl.DataFrame): The AHU data filtered for the current timestamp.
+
+        Returns:
+            bool: True if an alarm was found and handled, False otherwise.
+        """
         if not self.config.get("parameters", {}).get("enable_bms_filter_check", False):
             return False
         if ahu_data_for_ts.is_empty():
@@ -95,6 +120,15 @@ class IAQLogicEngine:
         return False
 
     def _check_iaq_triggers(self, sensor_data: dict) -> list[str]:
+        """
+        Checks a single sensor's data against all IAQ triggering thresholds from the config.
+
+        Args:
+            sensor_data (dict): A dictionary of a single sensor's readings for one timestamp.
+
+        Returns:
+            list[str]: A list of reasons for the trigger (e.g., ["co2", "tvoc"]).
+        """
         reasons = []
         trigger_thresholds = self.thresholds["triggering"]
         if sensor_data.get("co2", self.sensor_default) > self.outdoor_co2 + trigger_thresholds["co2_ppm_above_outdoor"]:
@@ -115,6 +149,13 @@ class IAQLogicEngine:
         return reasons
 
     def _check_for_normalization(self, sensor_data: dict) -> bool:
+        """
+        Checks if a sensor's pollutant levels have returned to the normal range 
+        after a dilution cycle (Branch A).
+
+        Returns:
+            bool: True if all pollutant levels are below normalization thresholds.
+        """
         norm_thresholds = self.thresholds["normalization"]
         return (
             sensor_data.get("co2", self.sensor_default) < self.outdoor_co2 + norm_thresholds["co2_ppm_above_outdoor"] and
@@ -125,6 +166,13 @@ class IAQLogicEngine:
         )
 
     def _check_for_comfort_normalization(self, sensor_data: dict) -> bool:
+        """
+        Checks if a sensor's temperature has returned to the normal comfort band 
+        (between temp_c_min and temp_c_max).
+
+        Returns:
+            bool: True if the temperature is within the normal range.
+        """
         temp = sensor_data.get("temperature")
         trigger_thresholds = self.thresholds["triggering"]
         norm_min = trigger_thresholds["temp_c_min"]
@@ -132,11 +180,22 @@ class IAQLogicEngine:
         return temp is not None and norm_min <= temp <= norm_max
 
     def _check_for_dehumid_normalization(self, sensor_data: dict) -> bool:
+        """
+        Checks if a sensor's humidity and temperature have returned to normal 
+        after a dehumidification cycle (Branch D).
+
+        Returns:
+            bool: True if both RH and temperature are within normal ranges.
+        """
         rh_norm_threshold = self.thresholds["normalization"]["rh_percent_max"]
         rh_normalized = sensor_data.get("humidity", self.sensor_default) < rh_norm_threshold
         return self._check_for_comfort_normalization(sensor_data) and rh_normalized
 
     def _execute_branch_a(self, ts: timedelta, sensor_id: str, all_data: dict, reasons: list[str]):
+        """
+        Executes the 'Dilution Mode' logic for pollutant-based alerts (Branch A),
+        which involves controlling VAV and PAD/FAD systems.
+        """
         current_state = self.sensor_states[sensor_id]
         max_cycles = self.thresholds["triggering"]["max_dilution_cycles"]
         if current_state["dilution_cycle_count"] >= max_cycles:
@@ -171,6 +230,9 @@ class IAQLogicEngine:
                 self._log_action(ts, sensor_id, "Alert", "VAV and PAD/FAD are both at maximum. Sending alert to FM team", reasons, cycle)
 
     def _execute_branch_b(self, ts: timedelta, sensor_id: str, all_data: dict, reasons: list[str]):
+        """
+        Executes the 'Cooling Mode' logic for hot and dry comfort alerts (Branch B).
+        """
         current_state = self.sensor_states[sensor_id]
         max_cycles = self.thresholds["triggering"]["max_dilution_cycles"]
         if current_state["dilution_cycle_count"] >= max_cycles:
@@ -197,6 +259,9 @@ class IAQLogicEngine:
             self._log_action(ts, sensor_id, "CHW Valve Action (Cooling)", f"VAV at max. Increasing Chilled Water Valve position by {increase_pct}%", reasons, cycle)
 
     def _execute_branch_c(self, ts: timedelta, sensor_id: str, all_data: dict, reasons: list[str]):
+        """
+        Executes the 'Warming Mode' logic for cold and dry comfort alerts (Branch C).
+        """
         current_state = self.sensor_states[sensor_id]
         max_cycles = self.thresholds["triggering"]["max_dilution_cycles"]
         if current_state["dilution_cycle_count"] >= max_cycles:
@@ -223,6 +288,9 @@ class IAQLogicEngine:
             self._log_action(ts, sensor_id, "CHW Valve Action (Warming)", f"VAV at min. Decreasing Chilled Water Valve position by {decrease_pct}%", reasons, cycle)
 
     def _execute_branch_d(self, ts: timedelta, sensor_id: str, all_data: dict, reasons: list[str]):
+        """
+        Executes the 'Dehumidification Mode' logic for high humidity comfort alerts (Branch D).
+        """
         current_state = self.sensor_states[sensor_id]
         max_cycles = self.thresholds["triggering"]["max_dilution_cycles"]
         if current_state["dilution_cycle_count"] >= max_cycles:
@@ -235,6 +303,10 @@ class IAQLogicEngine:
         self._log_action(ts, sensor_id, "CHW Valve Action (Dehumidifying)", f"Increasing Chilled Water Valve position by {increase_pct}%", reasons, cycle)
 
     def _handle_persistent_alert(self, ts: timedelta, sensor_id: str, sensor_data: dict, reasons: list[str], all_data: dict):
+        """
+        The main router function. It takes a persistent alert and decides which
+        logic branch (A, B, C, or D) to execute based on the trigger reasons.
+        """
         pollutant_triggers = {"co2", "tvoc", "pm2_5", "pm10", "hcho"}
         is_pollutant_alert = any(reason in pollutant_triggers for reason in reasons)
         if is_pollutant_alert:
@@ -264,6 +336,14 @@ class IAQLogicEngine:
                 self._log_action(ts, sensor_id, "Conflict Alert", "Ambiguous comfort triggers. Sending alert to FM team", reasons)
 
     def run_simulation(self, data: dict[str, pl.DataFrame]) -> list[dict]:
+        """
+        The main entry point for the simulation. It iterates through every timestamp 
+        in the dataset and applies the full flowchart logic, including PSI checks,
+        BMS filter checks, and sensor-level alert handling.
+
+        Returns:
+            list[dict]: A list of all actions and events that occurred during the simulation.
+        """
         iaq_df = data["iaq"]
         ahu_df = data["ahu"]
         timestamps = iaq_df["datetime"].unique().sort()
