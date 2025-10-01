@@ -1,0 +1,89 @@
+data_files:
+  sensor_1: "n_pdata_2"
+  sensor_2: "n_pdata_3"
+  ahu: "n_pdata_6_ahu"
+  vav: "n_pdata_8_vav"
+
+api_urls:
+  psi: "https://api-open.data.gov.sg/v2/real-time/api/psi"
+
+parameters:
+  enable_bms_filter_check: true
+  outdoor_co2_ppm: 400
+
+defaults:
+  sensor_reading_default: 0
+
+thresholds:
+  psi:
+    unhealthy_min: 101
+    unhealthy_max: 200
+    very_unhealthy_min: 201
+
+  triggering:
+    differential_pressure_pct_threshold: 90
+    co2_ppm_above_outdoor: 700
+    tvoc_ug_m3: 500
+    pm2_5_ug_m3: 15
+    pm10_ug_m3: 45
+    hcho_ug_m3: 100
+    rh_percent_max: 75
+    temp_c_min: 23
+    temp_c_max: 25
+    persistence_minutes: 5
+    pad_increase_percent: 5
+    max_dilution_cycles: 3
+
+  normalization:
+    co2_ppm_above_outdoor: 500
+    tvoc_ug_m3: 300
+    pm2_5_ug_m3: 8
+    pm10_ug_m3: 35
+    hcho_ug_m3: 50
+
+sensor_to_vav_map:
+  "044": "12"
+  "045": "13"
+  "046": "18"
+  "047": "19"
+  "048": "20"
+  "049": "21"
+  "050": "17"
+  "051": "16"
+  "052": "15"
+  "053": "14"
+  "054": "11"
+  "055": "10"
+  "056": "09"
+  "057": "08"
+  "058": "01a"
+  "059": "01b"
+  "120": "04"
+  "060": "06"
+  "061": "07"
+  "062": "05"
+  "063": "23"
+  "064": "22"
+  "106": "25"
+  "070": "27"
+  "085": "29"
+  "086": "28"
+  "065": "31"
+  "114": "26"
+  "094": "36"
+  "095": "34"
+  "096": "35"
+  "097": "32"
+  "099": "37"
+  "119": "24"
+  "066": "30"
+
+actions:
+  branch_b:
+    vav_flow_increase_pct: 10
+    chw_valve_increase_pct: 5
+  branch_c:
+    vav_flow_decrease_pct: 10
+    chw_valve_decrease_pct: 5
+  branch_d:
+    chw_valve_increase_pct: 5
