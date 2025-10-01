@@ -46,7 +46,8 @@ class IAQLogicEngine:
             if key not in self.config["thresholds"]["triggering"]:
                 raise ValueError(f"Configuration Error: Trigger threshold '{key}' is missing from config.yaml")
         required_norms = [
-            "co2_ppm_above_outdoor", "tvoc_ug_m3", "pm2_5_ug_m3", "pm10_ug_m3", "hcho_ug_m3"
+            "co2_ppm_above_outdoor", "tvoc_ug_m3", "pm2_5_ug_m3",
+            "pm10_ug_m3", "hcho_ug_m3", "rh_percent_max"
         ]
         for key in required_norms:
              if key not in self.config["thresholds"]["normalization"]:
@@ -75,6 +76,23 @@ class IAQLogicEngine:
             "reasons": str(reasons),
             "dilution_cycle": cycle,
         })
+
+    def _check_bms_filter_alarms(self, ts: timedelta, ahu_data_for_ts: pl.DataFrame) -> bool:
+        if not self.config.get("parameters", {}).get("enable_bms_filter_check", False):
+            return False
+        if ahu_data_for_ts.is_empty():
+            return False
+        ahu_row = ahu_data_for_ts.to_dicts()[0]
+        primary_filter_status = ahu_row.get("sne22_1_ddc_19_1_ahu_19_1_pri_filt_sts")
+        secondary_filter_status = ahu_row.get("sne22_1_ddc_19_1_ahu_19_1_sec_fil_sts")
+        if primary_filter_status == 1 or secondary_filter_status == 1:
+            details = (
+                f"AHU filter clog detected (Primary Status: {primary_filter_status}, "
+                f"Secondary Status: {secondary_filter_status}). FM team to inspect."
+            )
+            self._log_action(ts, sensor_id="SYSTEM_BMS", event="BMS Filter Alarm", details=details)
+            return True
+        return False
 
     def _check_iaq_triggers(self, sensor_data: dict) -> list[str]:
         reasons = []
@@ -113,6 +131,11 @@ class IAQLogicEngine:
         norm_max = trigger_thresholds["temp_c_max"]
         return temp is not None and norm_min <= temp <= norm_max
 
+    def _check_for_dehumid_normalization(self, sensor_data: dict) -> bool:
+        rh_norm_threshold = self.thresholds["normalization"]["rh_percent_max"]
+        rh_normalized = sensor_data.get("humidity", self.sensor_default) < rh_norm_threshold
+        return self._check_for_comfort_normalization(sensor_data) and rh_normalized
+
     def _execute_branch_a(self, ts: timedelta, sensor_id: str, all_data: dict, reasons: list[str]):
         current_state = self.sensor_states[sensor_id]
         max_cycles = self.thresholds["triggering"]["max_dilution_cycles"]
@@ -147,14 +170,78 @@ class IAQLogicEngine:
             else:
                 self._log_action(ts, sensor_id, "Alert", "VAV and PAD/FAD are both at maximum. Sending alert to FM team", reasons, cycle)
 
+    def _execute_branch_b(self, ts: timedelta, sensor_id: str, all_data: dict, reasons: list[str]):
+        current_state = self.sensor_states[sensor_id]
+        max_cycles = self.thresholds["triggering"]["max_dilution_cycles"]
+        if current_state["dilution_cycle_count"] >= max_cycles:
+            self._log_action(ts, sensor_id, "Cooling Failed", f"Max cycles ({max_cycles}) reached", reasons)
+            return
+        current_state["dilution_cycle_count"] += 1
+        cycle = current_state["dilution_cycle_count"]
+        vav_id = self.sensor_to_vav_map.get(sensor_id)
+        if not vav_id:
+            self._log_action(ts, sensor_id, "Branch B Skipped", "No VAV mapping found", reasons, cycle)
+            return
+        self._log_action(ts, sensor_id, "Cooling Cycle Started", f"Cycle #{cycle} for VAV '{vav_id}'", reasons, cycle)
+        vav_data = all_data["vav"].filter((pl.col("datetime") == ts) & (pl.col("vav_id") == vav_id))
+        if vav_data.is_empty():
+            self._log_action(ts, sensor_id, "Branch B Halted", f"VAV mapping exists for '{vav_id}', but no data found at this timestamp", reasons, cycle)
+            return
+        vav_max_setpoint = vav_data.select("cmaxflo").item()
+        vav_current_setpoint = vav_data.select("supflosp").item()
+        if vav_current_setpoint < vav_max_setpoint:
+            increase_pct = self.actions_config["branch_b"]["vav_flow_increase_pct"]
+            self._log_action(ts, sensor_id, "VAV Action (Cooling)", f"VAV '{vav_id}' not at max. Increasing flow setpoint by {increase_pct}%", reasons, cycle)
+        else:
+            increase_pct = self.actions_config["branch_b"]["chw_valve_increase_pct"]
+            self._log_action(ts, sensor_id, "CHW Valve Action (Cooling)", f"VAV at max. Increasing Chilled Water Valve position by {increase_pct}%", reasons, cycle)
+
+    def _execute_branch_c(self, ts: timedelta, sensor_id: str, all_data: dict, reasons: list[str]):
+        current_state = self.sensor_states[sensor_id]
+        max_cycles = self.thresholds["triggering"]["max_dilution_cycles"]
+        if current_state["dilution_cycle_count"] >= max_cycles:
+            self._log_action(ts, sensor_id, "Warming Failed", f"Max cycles ({max_cycles}) reached", reasons)
+            return
+        current_state["dilution_cycle_count"] += 1
+        cycle = current_state["dilution_cycle_count"]
+        vav_id = self.sensor_to_vav_map.get(sensor_id)
+        if not vav_id:
+            self._log_action(ts, sensor_id, "Branch C Skipped", "No VAV mapping found", reasons, cycle)
+            return
+        self._log_action(ts, sensor_id, "Warming Cycle Started", f"Cycle #{cycle} for VAV '{vav_id}'", reasons, cycle)
+        vav_data = all_data["vav"].filter((pl.col("datetime") == ts) & (pl.col("vav_id") == vav_id))
+        if vav_data.is_empty():
+            self._log_action(ts, sensor_id, "Branch C Halted", f"VAV mapping exists for '{vav_id}', but no data found at this timestamp", reasons, cycle)
+            return
+        vav_min_setpoint = vav_data.select("ocmnc_sp").item()
+        vav_current_setpoint = vav_data.select("supflosp").item()
+        if vav_current_setpoint > vav_min_setpoint:
+            decrease_pct = self.actions_config["branch_c"]["vav_flow_decrease_pct"]
+            self._log_action(ts, sensor_id, "VAV Action (Warming)", f"VAV '{vav_id}' not at min. Decreasing flow setpoint by {decrease_pct}%", reasons, cycle)
+        else:
+            decrease_pct = self.actions_config["branch_c"]["chw_valve_decrease_pct"]
+            self._log_action(ts, sensor_id, "CHW Valve Action (Warming)", f"VAV at min. Decreasing Chilled Water Valve position by {decrease_pct}%", reasons, cycle)
+
+    def _execute_branch_d(self, ts: timedelta, sensor_id: str, all_data: dict, reasons: list[str]):
+        current_state = self.sensor_states[sensor_id]
+        max_cycles = self.thresholds["triggering"]["max_dilution_cycles"]
+        if current_state["dilution_cycle_count"] >= max_cycles:
+            self._log_action(ts, sensor_id, "Dehumidification Failed", f"Max cycles ({max_cycles}) reached", reasons)
+            return
+        current_state["dilution_cycle_count"] += 1
+        cycle = current_state["dilution_cycle_count"]
+        self._log_action(ts, sensor_id, "Dehumidification Cycle Started", f"Cycle #{cycle}", reasons, cycle)
+        increase_pct = self.actions_config["branch_d"]["chw_valve_increase_pct"]
+        self._log_action(ts, sensor_id, "CHW Valve Action (Dehumidifying)", f"Increasing Chilled Water Valve position by {increase_pct}%", reasons, cycle)
+
     def _handle_persistent_alert(self, ts: timedelta, sensor_id: str, sensor_data: dict, reasons: list[str], all_data: dict):
         pollutant_triggers = {"co2", "tvoc", "pm2_5", "pm10", "hcho"}
         is_pollutant_alert = any(reason in pollutant_triggers for reason in reasons)
         if is_pollutant_alert:
             self.sensor_states[sensor_id]["alert_type"] = "pollutant"
+            self._log_action(ts, sensor_id, "Branch Routing", "Pollutant alert. Routing to Branch A.", reasons)
             self._execute_branch_a(ts, sensor_id, all_data, reasons)
         else:
-            self.sensor_states[sensor_id]["alert_type"] = "comfort"
             trigger_thresholds = self.thresholds["triggering"]
             rh_max = trigger_thresholds["rh_percent_max"]
             temp_max = trigger_thresholds["temp_c_max"]
@@ -162,16 +249,23 @@ class IAQLogicEngine:
             rh = sensor_data.get("humidity", self.sensor_default)
             temp = sensor_data.get("temperature")
             if rh < rh_max and temp > temp_max:
-                self._log_action(ts, sensor_id, "Comfort Alert (Branch B)", "Too Hot: Increasing cooling", reasons)
+                self.sensor_states[sensor_id]["alert_type"] = "comfort_hot"
+                self._log_action(ts, sensor_id, "Branch Routing", "Comfort alert (Too Hot). Routing to Branch B.", reasons)
+                self._execute_branch_b(ts, sensor_id, all_data, reasons)
             elif rh < rh_max and temp < temp_min:
-                self._log_action(ts, sensor_id, "Comfort Alert (Branch C)", "Too Cold: Decreasing cooling", reasons)
-            elif rh > rh_max and temp_min <= temp <= temp_max:
-                self._log_action(ts, sensor_id, "Comfort Alert (Branch D)", "Too Humid: Increasing dehumidification", reasons)
+                self.sensor_states[sensor_id]["alert_type"] = "comfort_cold"
+                self._log_action(ts, sensor_id, "Branch Routing", "Comfort alert (Too Cold). Routing to Branch C.", reasons)
+                self._execute_branch_c(ts, sensor_id, all_data, reasons)
+            elif rh >= rh_max:
+                self.sensor_states[sensor_id]["alert_type"] = "comfort_humid"
+                self._log_action(ts, sensor_id, "Branch Routing", "Comfort alert (Too Humid). Routing to Branch D.", reasons)
+                self._execute_branch_d(ts, sensor_id, all_data, reasons)
             else:
-                self._log_action(ts, sensor_id, "Conflict Alert", "High RH/Temp conflict. Sending alert to FM team", reasons)
+                self._log_action(ts, sensor_id, "Conflict Alert", "Ambiguous comfort triggers. Sending alert to FM team", reasons)
 
     def run_simulation(self, data: dict[str, pl.DataFrame]) -> list[dict]:
         iaq_df = data["iaq"]
+        ahu_df = data["ahu"]
         timestamps = iaq_df["datetime"].unique().sort()
         persistence_delta = timedelta(minutes=self.thresholds["triggering"]["persistence_minutes"])
         simulation_date = timestamps[0].date() if not timestamps.is_empty() else None
@@ -188,6 +282,9 @@ class IAQLogicEngine:
             elif psi_value_24hr >= psi_thresholds["very_unhealthy_min"]:
                  self._log_action(ts="N/A", sensor_id="SYSTEM", event="PSI Alert", details="PSI is Very Unhealthy/Hazardous. Recommending HEPA Filters.")
         for ts in timestamps:
+            ahu_data_for_ts = ahu_df.filter(pl.col("datetime") == ts)
+            if self._check_bms_filter_alarms(ts, ahu_data_for_ts):
+                continue
             readings_for_ts = iaq_df.filter(pl.col("datetime") == ts)
             for sensor_row in readings_for_ts.to_dicts():
                 sensor_id = sensor_row["sensor_id"]
@@ -196,13 +293,18 @@ class IAQLogicEngine:
                 current_state = self.sensor_states[sensor_id]
                 if current_state["is_triggered"]:
                     normalized = False
-                    if current_state["alert_type"] == "pollutant":
+                    alert_type = current_state["alert_type"]
+                    if alert_type == "pollutant":
                         if self._check_for_normalization(sensor_row):
                             self._log_action(ts, sensor_id, "Normalization", "Dilution Successful! Pollutant levels normalized.")
                             normalized = True
-                    elif current_state["alert_type"] == "comfort":
+                    elif alert_type in ["comfort_hot", "comfort_cold"]:
                          if self._check_for_comfort_normalization(sensor_row):
                             self._log_action(ts, sensor_id, "Normalization", "Comfort Restored! Temperature is normal.")
+                            normalized = True
+                    elif alert_type == "comfort_humid":
+                         if self._check_for_dehumid_normalization(sensor_row):
+                            self._log_action(ts, sensor_id, "Normalization", "Dehumidification Successful! RH and Temp are normal.")
                             normalized = True
                     if normalized:
                         current_state.update({"is_triggered": False, "alert_start_time": None, "has_fired": False, "dilution_cycle_count": 0, "alert_type": None})
