@@ -23,7 +23,7 @@ def main():
     data_path = project_root / 'data' / 'raw'
     reports_path = project_root / 'reports'
     config = load_config(config_path)
-    processed_data = load_and_process_data(data_path)
+    processed_data = load_and_process_data(data_path, config)
     engine = IAQLogicEngine(config)
     log_records = engine.run_simulation(processed_data)
     if log_records:
