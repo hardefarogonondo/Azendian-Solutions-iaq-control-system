@@ -1,5 +1,6 @@
 **/.DS_store
 **/.ipynb_checkpoints
+**/.pytest_cache
 **/.vscode
 **/__pycache__
 .env
