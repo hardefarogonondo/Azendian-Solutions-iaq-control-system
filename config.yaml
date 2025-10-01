@@ -40,6 +40,7 @@ thresholds:
     pm2_5_ug_m3: 8
     pm10_ug_m3: 35
     hcho_ug_m3: 50
+    rh_percent_max: 60
 
 sensor_to_vav_map:
   "044": "12"
