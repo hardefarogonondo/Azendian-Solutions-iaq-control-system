@@ -25,6 +25,7 @@ class IAQLogicEngine:
         self.actions_config = self.config["actions"]
         self.sensor_states = {}
         self.log_records = []
+        self.detailed_log_records = []
         logger.info("IAQ Logic Engine Initialized.")
 
     def _validate_config(self):
@@ -388,7 +389,6 @@ class IAQLogicEngine:
                             normalized = True
                     if normalized:
                         current_state.update({"is_triggered": False, "alert_start_time": None, "has_fired": False, "dilution_cycle_count": 0, "alert_type": None})
-                        continue
                 trigger_reasons = self._check_iaq_triggers(sensor_row)
                 is_currently_triggered = bool(trigger_reasons)
                 if is_currently_triggered and not current_state["is_triggered"]:
@@ -401,5 +401,18 @@ class IAQLogicEngine:
                         current_state["has_fired"] = True
                 elif not is_currently_triggered and current_state["is_triggered"]:
                     current_state.update({"is_triggered": False, "alert_start_time": None, "has_fired": False})
+                self.detailed_log_records.append({
+                    "timestamp": ts,
+                    "sensor_id": sensor_id,
+                    "is_triggered": current_state["is_triggered"],
+                    "has_fired": current_state["has_fired"],
+                    "alert_type": current_state["alert_type"],
+                    "dilution_cycle": current_state["dilution_cycle_count"],
+                    "temperature": sensor_row.get("temperature"),
+                    "co2": sensor_row.get("co2"),
+                    "humidity": sensor_row.get("humidity"),
+                    "tvoc": sensor_row.get("tvoc"),
+                    "pm2_5": sensor_row.get("pm2_5"),
+                })
         logger.info("Simulation finished.")
-        return self.log_records
+        return self.log_records, self.detailed_log_records
