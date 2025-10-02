@@ -1,0 +1,328 @@
+sensor_id,event,len
+095,Normalization,7
+070,Dilution Cycle Started,29
+052,VAV Action (Warming),13
+043,Branch Routing,1
+114,VAV Action,1
+062,Normalization,31
+055,Dilution Cycle Started,12
+046,CHW Valve Action (Cooling),1
+058,Branch Routing,26
+056,CHW Valve Action (Warming),8
+063,Branch Routing,27
+095,CHW Valve Action (Warming),1
+053,VAV Action (Warming),6
+119,Branch Routing,45
+044,Branch Routing,27
+076,Branch A Skipped,1
+046,VAV Action (Warming),26
+060,CHW Valve Action (Warming),3
+086,Dilution Cycle Started,13
+049,VAV Action (Warming),5
+071,Normalization,21
+052,Dilution Cycle Started,18
+052,VAV Action,7
+059,CHW Valve Action (Warming),4
+063,Normalization,23
+059,Normalization,7
+051,Dilution Cycle Started,12
+052,PAD Action,11
+120,Cooling Cycle Started,5
+098,Branch A Skipped,1
+047,VAV Action,11
+097,CHW Valve Action (Warming),1
+076,Branch Routing,1
+069,Branch C Skipped,1
+053,Dilution Cycle Started,21
+066,VAV Action (Warming),5
+061,CHW Valve Action (Warming),15
+085,CHW Valve Action (Cooling),1
+107,Branch A Skipped,31
+053,PAD Action,20
+096,PAD Action,55
+061,Dilution Cycle Started,16
+049,Branch Routing,16
+114,Dilution Cycle Started,1
+067,Branch Routing,78
+094,VAV Action (Warming),6
+101,Normalization,15
+060,Branch Routing,21
+050,Dilution Cycle Started,9
+063,CHW Valve Action (Warming),20
+056,PAD Action,16
+059,Dilution Cycle Started,13
+066,VAV Action,12
+071,Branch Routing,26
+085,VAV Action (Warming),8
+052,Branch Routing,32
+066,Normalization,21
+059,Branch Routing,20
+064,Dilution Cycle Started,2
+060,PAD Action,6
+065,Dilution Cycle Started,1
+044,Normalization,7
+064,VAV Action,2
+047,CHW Valve Action (Cooling),6
+051,VAV Action (Warming),14
+049,VAV Action,6
+056,VAV Action,2
+042,Branch C Skipped,17
+070,Normalization,15
+070,VAV Action,15
+064,CHW Valve Action (Warming),1
+056,VAV Action (Warming),4
+075,Normalization,6
+067,Branch C Skipped,22
+095,VAV Action (Warming),6
+111,Branch B Skipped,1
+063,PAD Action,4
+073,Branch Routing,35
+092,Branch Routing,1
+065,VAV Action,1
+045,VAV Action,10
+094,Branch Routing,15
+057,Warming Cycle Started,7
+059,CHW Valve Action (Cooling),1
+108,Branch C Skipped,3
+094,VAV Action,4
+043,Branch A Skipped,1
+073,Branch B Skipped,1
+055,CHW Valve Action (Cooling),2
+058,CHW Valve Action (Cooling),6
+047,Warming Cycle Started,17
+046,Normalization,27
+106,Dilution Cycle Started,1
+062,Cooling Cycle Started,8
+070,PAD Action,14
+079,Branch Routing,1
+077,Branch Routing,16
+045,Warming Cycle Started,10
+048,Dilution Cycle Started,1
+099,VAV Action,1
+063,Warming Cycle Started,22
+061,Branch Routing,31
+056,Dilution Cycle Started,18
+044,VAV Action,2
+044,VAV Action (Warming),6
+097,Normalization,7
+086,VAV Action,1
+050,PAD Action,8
+057,CHW Valve Action (Cooling),1
+086,Normalization,26
+057,PAD Action,9
+056,Branch Routing,32
+077,Branch A Skipped,8
+050,Normalization,8
+071,Branch B Skipped,2
+101,Branch A Skipped,23
+050,Branch Routing,17
+117,Branch A Skipped,15
+108,Branch Routing,7
+047,PAD Action,3
+093,Branch A Skipped,6
+063,VAV Action,1
+095,Warming Cycle Started,7
+047,Normalization,23
+067,Branch A Skipped,56
+117,Normalization,16
+055,Normalization,4
+085,Dilution Cycle Started,32
+097,VAV Action (Warming),6
+042,Branch Routing,26
+087,Branch A Skipped,1
+058,PAD Action,2
+051,Normalization,17
+093,Branch Routing,11
+092,Branch A Skipped,1
+046,Warming Cycle Started,26
+044,Dilution Cycle Started,20
+070,CHW Valve Action (Warming),9
+120,PAD Action,4
+112,Branch A Skipped,1
+075,Branch C Skipped,6
+101,Branch Routing,39
+053,VAV Action,1
+120,Normalization,25
+055,Branch Routing,17
+056,Warming Cycle Started,12
+071,Branch A Skipped,5
+112,Branch Routing,1
+119,PAD Action,32
+099,Branch Routing,1
+058,Dilution Cycle Started,3
+117,Branch Routing,29
+096,VAV Action,3
+045,Dilution Cycle Started,16
+051,VAV Action,5
+068,Branch C Skipped,1
+059,VAV Action (Warming),2
+107,Branch C Skipped,42
+086,VAV Action (Warming),15
+120,Branch Routing,32
+067,Normalization,23
+059,VAV Action,2
+119,VAV Action,13
+085,Branch Routing,42
+051,CHW Valve Action (Warming),3
+052,Normalization,14
+062,CHW Valve Action (Cooling),8
+044,CHW Valve Action (Warming),1
+095,PAD Action,10
+096,Normalization,7
+046,PAD Action,6
+095,Dilution Cycle Started,15
+054,VAV Action,1
+055,VAV Action (Warming),2
+065,Branch Routing,1
+046,Branch Routing,38
+119,Dilution Cycle Started,45
+053,Branch Routing,27
+059,PAD Action,11
+097,Dilution Cycle Started,16
+097,Branch Routing,23
+063,VAV Action (Warming),2
+051,PAD Action,7
+071,Branch C Skipped,19
+075,Branch Routing,21
+057,Branch Routing,19
+064,Normalization,1
+094,Normalization,6
+060,VAV Action (Warming),8
+060,Normalization,11
+066,Warming Cycle Started,21
+120,VAV Action,2
+097,PAD Action,9
+047,CHW Valve Action (Warming),11
+086,CHW Valve Action (Warming),7
+062,Warming Cycle Started,23
+049,Warming Cycle Started,5
+055,PAD Action,8
+060,VAV Action,4
+079,Branch A Skipped,1
+050,VAV Action,1
+061,VAV Action,5
+056,CHW Valve Action (Cooling),2
+069,Branch Routing,1
+042,Normalization,17
+096,Dilution Cycle Started,58
+078,Branch A Skipped,42
+048,VAV Action,1
+106,VAV Action,1
+070,Branch Routing,38
+099,Dilution Cycle Started,1
+058,CHW Valve Action (Warming),11
+050,VAV Action (Warming),8
+094,Dilution Cycle Started,9
+050,Warming Cycle Started,8
+047,Dilution Cycle Started,14
+096,VAV Action (Warming),7
+086,Branch Routing,35
+046,Dilution Cycle Started,11
+057,Cooling Cycle Started,1
+077,Branch C Skipped,8
+085,Cooling Cycle Started,1
+058,Warming Cycle Started,17
+045,VAV Action (Warming),5
+078,Branch C Skipped,6
+063,Dilution Cycle Started,5
+062,Dilution Cycle Started,2
+111,Branch C Skipped,5
+120,CHW Valve Action (Warming),21
+085,Warming Cycle Started,9
+059,Warming Cycle Started,6
+073,Branch A Skipped,24
+108,Normalization,3
+120,Dilution Cycle Started,6
+066,Branch Routing,34
+057,Dilution Cycle Started,11
+047,Branch Routing,37
+066,Dilution Cycle Started,13
+053,Normalization,7
+085,PAD Action,27
+044,PAD Action,18
+046,VAV Action,5
+059,Cooling Cycle Started,1
+058,Cooling Cycle Started,6
+057,VAV Action (Warming),6
+060,Dilution Cycle Started,10
+098,Branch Routing,1
+060,Warming Cycle Started,11
+062,VAV Action (Warming),23
+045,PAD Action,6
+073,Branch C Skipped,10
+066,PAD Action,1
+053,Warming Cycle Started,6
+057,Normalization,8
+055,Warming Cycle Started,3
+064,Branch Routing,3
+058,Normalization,22
+117,Branch C Skipped,14
+108,Branch A Skipped,4
+047,VAV Action (Warming),6
+045,Branch Routing,26
+078,Branch Routing,48
+086,Warming Cycle Started,22
+054,Dilution Cycle Started,1
+042,Branch A Skipped,9
+057,VAV Action,2
+107,Normalization,42
+073,Normalization,11
+107,Branch Routing,73
+061,Warming Cycle Started,15
+120,VAV Action (Cooling),2
+085,Normalization,10
+045,Normalization,10
+051,Warming Cycle Started,17
+046,Cooling Cycle Started,1
+047,Cooling Cycle Started,6
+055,Cooling Cycle Started,2
+120,Warming Cycle Started,21
+085,CHW Valve Action (Warming),1
+077,Normalization,8
+064,Warming Cycle Started,1
+062,Branch Routing,33
+058,VAV Action (Warming),6
+101,Branch C Skipped,16
+052,CHW Valve Action (Warming),1
+086,PAD Action,12
+111,Branch Routing,14
+052,Warming Cycle Started,14
+095,VAV Action,5
+097,Warming Cycle Started,7
+051,Branch Routing,29
+075,Branch A Skipped,15
+096,Branch Routing,65
+094,Warming Cycle Started,6
+070,Warming Cycle Started,9
+057,CHW Valve Action (Warming),1
+045,CHW Valve Action (Warming),5
+085,VAV Action,5
+096,Warming Cycle Started,7
+111,Normalization,6
+062,PAD Action,2
+068,Branch Routing,1
+049,Dilution Cycle Started,11
+044,Warming Cycle Started,7
+094,PAD Action,5
+066,CHW Valve Action (Warming),16
+056,Cooling Cycle Started,2
+114,Branch Routing,1
+106,Branch Routing,1
+093,Branch C Skipped,5
+054,Branch Routing,1
+097,VAV Action,7
+055,CHW Valve Action (Warming),1
+058,VAV Action,1
+087,Branch Routing,1
+048,Branch Routing,1
+055,VAV Action,4
+049,PAD Action,5
+049,Normalization,5
+095,Branch Routing,22
+061,PAD Action,11
+061,Normalization,16
+111,Branch A Skipped,8
+056,Normalization,14
+093,Normalization,5
+078,Normalization,6
+120,CHW Valve Action (Cooling),3
