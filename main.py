@@ -4,7 +4,7 @@ from pathlib import Path
 from src.config import load_config
 from src.data_ingestion import load_and_process_data
 from src.logic_engine import IAQLogicEngine
-from src.reports_writer import generate_reports
+from src.reports_writer import generate_event_reports, generate_detailed_simulation_log
 import logging
 
 # --- 1. Configure Logging ---
@@ -35,12 +35,11 @@ def main():
     # Initialize the engine with the rules from the config file.
     engine = IAQLogicEngine(config)
     # Run the simulation using the clean data and get the results.
-    log_records = engine.run_simulation(processed_data)
+    event_log, detailed_log = engine.run_simulation(processed_data)
     # --- 5. Reporting Phase ---
-    # If the simulation produced any results, write them to CSV files.
-    if log_records:
-        generate_reports(log_records, reports_path, run_timestamp)
-    logger.info("Simulation script finished.")
+    # The results from the simulation are in the 'event_log' and 'detailed_log' variables.
+    generate_event_reports(event_log, reports_path, run_timestamp)
+    generate_detailed_simulation_log(detailed_log, reports_path, run_timestamp)
 
 if __name__ == "__main__":
     main()
