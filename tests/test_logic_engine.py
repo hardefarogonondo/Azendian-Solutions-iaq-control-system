@@ -158,12 +158,53 @@ def test_run_simulation_full_cycle(base_config, monkeypatch):
         "vav": pl.DataFrame({"datetime": timestamps, "vav_id": ["vav_01"]*len(timestamps), "cmaxflo": [1000]*len(timestamps), "supflosp": [500]*len(timestamps)}),
         "ahu": pl.DataFrame({"datetime": timestamps})
     }
-    logs = engine.run_simulation(mock_data)
-    log_events = [log["event"] for log in logs]
+    event_logs, _ = engine.run_simulation(mock_data)
+    log_events = [log["event"] for log in event_logs]
     assert "Branch Routing" in log_events
     assert "VAV Action" in log_events
     assert "Normalization" in log_events
     assert not engine.sensor_states["047"]["is_triggered"]
+
+def test_run_simulation_generates_correct_detailed_log(base_config, monkeypatch):
+    """
+    Tests the detailed_log output from run_simulation to ensure it correctly
+    captures the minute-by-minute state changes of a sensor.
+    """
+    monkeypatch.setattr("src.logic_engine.fetch_psi_data", lambda date=None: pl.DataFrame())
+    engine = IAQLogicEngine(base_config)
+    persistence_min = base_config["thresholds"]["triggering"]["persistence_minutes"] # This is 2 mins
+    # We'll simulate 4 minutes: Trigger -> Persist -> Action -> Normalize
+    timestamps = [datetime(2025, 1, 1, 12, i) for i in range(persistence_min + 2)]
+    # TVOC is high for 3 mins, then normalizes in the 4th min
+    tvoc_readings = [600] * (persistence_min + 1) + [300]
+    mock_data = {
+        "iaq": pl.DataFrame({"datetime": timestamps, "sensor_id": ["047"]*len(timestamps), "tvoc": tvoc_readings}),
+        "vav": pl.DataFrame({"datetime": timestamps, "vav_id": ["vav_01"]*len(timestamps), "cmaxflo": [1000]*len(timestamps), "supflosp": [500]*len(timestamps)}),
+        "ahu": pl.DataFrame({"datetime": timestamps})
+    }
+    _, detailed_log = engine.run_simulation(mock_data)
+    detailed_df = pl.DataFrame(detailed_log)
+    # Check that the log has an entry for every timestamp
+    assert detailed_df.shape[0] == len(timestamps)
+    # Check the state at the initial trigger (minute 0)
+    # is_triggered should be True, but has_fired should be False
+    first_state = detailed_df.row(0, named=True)
+    assert first_state["is_triggered"] is True
+    assert first_state["has_fired"] is False
+    assert first_state["alert_type"] == "pollutant"
+    # Check the state when the action fires (minute 2, index 2)
+    # is_triggered and has_fired should both be True
+    action_state = detailed_df.row(persistence_min, named=True)
+    assert action_state["is_triggered"] is True
+    assert action_state["has_fired"] is True
+    assert action_state["dilution_cycle"] == 1
+    # Check the state after normalization (final minute)
+    # All flags should be reset to their default state
+    final_state = detailed_df.row(-1, named=True)
+    assert final_state["is_triggered"] is False
+    assert final_state["has_fired"] is False
+    assert final_state["alert_type"] is None
+    assert final_state["dilution_cycle"] == 0
 
 def test_psi_mapping_haze_mode(base_config, caplog, monkeypatch):
     """
