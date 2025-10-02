@@ -20,14 +20,14 @@ def test_generate_reports_creates_files(tmp_path):
     summary_path = output_dir / f"summary_report_{run_timestamp}.csv"
     assert detailed_path.exists()
     assert summary_path.exists()
-    detailed_df = pl.read_csv(detailed_path)
+    detailed_df = pl.read_csv(detailed_path, schema_overrides={"sensor_id": pl.String})
     assert detailed_df.shape == (3, 6)
-    summary_df = pl.read_csv(summary_path)
+    summary_df = pl.read_csv(summary_path, schema_overrides={"sensor_id": pl.String})
     assert summary_df.shape == (3, 3) # 3 unique sensor_id/event pairs
     # Find the count for the 'Dilution Cycle Started' event for sensor 047
     count_val = summary_df.filter(
         (pl.col("sensor_id") == "047") & (pl.col("event") == "Dilution Cycle Started")
-    ).select("count").item()
+    ).select("len").item()
     assert count_val == 1
 
 def test_generate_reports_skips_on_empty_logs(tmp_path, caplog):
