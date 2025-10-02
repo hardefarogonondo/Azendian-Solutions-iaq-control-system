@@ -4,6 +4,10 @@ from src.reports_writer import generate_reports
 import polars as pl
 
 def test_generate_reports_creates_files(tmp_path):
+    """
+    Tests the "happy path" where the function receives records and successfully
+    creates the detailed and summary CSV files with the correct content.
+    """
     output_dir = tmp_path / "reports"
     run_timestamp = "2025-10-01_12-00-00"
     log_records = [
@@ -27,6 +31,10 @@ def test_generate_reports_creates_files(tmp_path):
     assert count_val == 1
 
 def test_generate_reports_skips_on_empty_logs(tmp_path, caplog):
+    """
+    Tests the edge case where the function receives no log records.
+    It asserts that no files are created and a warning is logged.
+    """
     output_dir = tmp_path / "reports"
     run_timestamp = "2025-10-01_12-00-00"
     generate_reports([], output_dir, run_timestamp)
